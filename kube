@@ -1,0 +1,75 @@
+
+MASTER AND SLAVE
+================
+url:https://youtu.be/UWg3ORRRF60
+================================
+
+//updaete repo
+apt-get update
+
+//turn off swap space and comment out in /etc/fstab
+swapoff -a
+vi /etc/fstab //comment out swap line, save and exit
+
+//install dependencies
+apt-get update && apt-get install -y apt-transport-https curl
+curl -s https://pakages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF ./etc/apt/sources.list.d/kubernetes.list          //all part of one command
+deb http://apt.kubernetes.io/ kubernetes-xenial main 
+EOF //ends here
+apt-get update
+
+// install kubeadm kubelet & kubectl
+apt-get install -y kubelet kubeadm kubectl
+
+
+//update kubernetes config by add line to bottom of Environment commands
+vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+Environment="cgroup-driver=systemd/cgroup-driver=cgroupfs"
+
+MASTER ONLY
+===========
+kubeadm init --pod-network-cidr=<> --apiserver-advertise-address=<ip-address-of-master>
+//for starting a calico cni: 192.168.0.0/16 or flanel cni : 10.244.0.0/16
+
+//Run the ff commands as a regular user
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+ 
+//create calico pod network
+kubectl apply -f https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+
+//copy join token for slave nodes
+
+//verify successfull installation
+kubectl get pods //status of nodes
+kubectl get pods --all-namespaces   //status of pods
+kubectl get pods -o wide --all-namespaces   //detailed status of pods
+
+//create dashboard before joining slave nodes
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+ 
+kubectl get pods -o wide --all-namespaces   //detailed status of pods
+
+
+//to enable proxy and continue with browser window
+kubectl proxy
+url: http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login
+
+
+//to create service account for dashboard
+kubectl create serviceaccount dashboard -n default
+
+//to add cluster binding rules for roles on dashboard
+kubectl create clusterrolebinding dashboard-admin -n default \
+--clusterrole=cluster-admin \
+--serviceaccount=default:dashboard
+
+//to get secret key to be pasted onto dashboard token pwd, copy outcoming secret key
+kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
+
+
+
+//join slave nodes with copied token and your cluster is setup
