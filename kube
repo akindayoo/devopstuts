@@ -9,14 +9,19 @@ apt-get update
 
 //turn off swap space and comment out in /etc/fstab
 swapoff -a
-vi /etc/fstab //comment out swap line, save and exit
+
+//comment out swap line, save and exit
+vi /etc/fstab 
+
+//verify swap is off
+free -h
 
 //install dependencies
-apt-get update && apt-get install -y apt-transport-https curl
-curl -s https://pakages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-cat <<EOF ./etc/apt/sources.list.d/kubernetes.list          //all part of one command
-deb http://apt.kubernetes.io/ kubernetes-xenial main 
-EOF //ends here
+
+sudo apt install curl apt-transport-https -y
+curl -fsSL  https://packages.cloud.google.com/apt/doc/apt-key.gpg|sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/k8s.gpg
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 apt-get update
 
 // install kubeadm kubelet & kubectl
